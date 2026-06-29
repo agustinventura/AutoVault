@@ -132,6 +132,147 @@ class TestStartMeeting:
         assert "Sync Rápido" in md.get_section(daily, "Agenda")
 
 
+class TestStartMeetingInline:
+    """Reuniones inline: notas van a sección ## Nombre en Notes de la daily."""
+
+    def test_no_meeting_note_created(self, vault):
+        setup_day(vault)
+        run("start-meeting", vault,
+            "--day", TODAY, "--time", TIME_NOW,
+            "--org", "Mango", "--project", "Kondo",
+            "--name", "Kondo Daily",
+            "--participants", "Agustín",
+            "--goal", "Sync",
+            "--focus-file", str(vault / ".focus"),
+            "--inline")
+        year, month = TODAY[:4], TODAY[4:6]
+        note = vault / "Mango" / "Meetings" / year / month / f"{TODAY}-Kondo Daily.md"
+        assert not note.exists()
+
+    def test_focus_type_is_inline_meeting(self, vault):
+        setup_day(vault)
+        run("start-meeting", vault,
+            "--day", TODAY, "--time", TIME_NOW,
+            "--org", "Mango", "--project", "Kondo",
+            "--name", "Kondo Daily",
+            "--participants", "Agustín",
+            "--goal", "Sync",
+            "--focus-file", str(vault / ".focus"),
+            "--inline")
+        data = focus_mod.read_focus(vault / ".focus")
+        assert data is not None
+        assert data["type"] == "inline-meeting"
+        assert data["section"] == "Kondo Daily"
+
+    def test_focus_path_is_daily_note(self, vault):
+        setup_day(vault)
+        run("start-meeting", vault,
+            "--day", TODAY, "--time", TIME_NOW,
+            "--org", "Mango", "--project", "Kondo",
+            "--name", "Kondo Daily",
+            "--participants", "Agustín",
+            "--goal", "Sync",
+            "--focus-file", str(vault / ".focus"),
+            "--inline")
+        data = focus_mod.read_focus(vault / ".focus")
+        year, month = TODAY[:4], TODAY[4:6]
+        assert f"Daily log/{year}/{month}/{TODAY}.md" in data["path"]
+
+    def test_creates_subsection_in_daily_notes(self, vault):
+        setup_day(vault)
+        run("start-meeting", vault,
+            "--day", TODAY, "--time", TIME_NOW,
+            "--org", "Mango", "--project", "Kondo",
+            "--name", "Kondo Daily",
+            "--participants", "Agustín",
+            "--goal", "Sync",
+            "--focus-file", str(vault / ".focus"),
+            "--inline")
+        year, month = TODAY[:4], TODAY[4:6]
+        daily = (vault / "Daily log" / year / month / f"{TODAY}.md").read_text(encoding="utf-8")
+        assert "### Kondo Daily" in daily
+
+    def test_inline_does_not_add_to_project_enlaces(self, vault):
+        setup_day(vault)
+        run("start-meeting", vault,
+            "--day", TODAY, "--time", TIME_NOW,
+            "--org", "Mango", "--project", "Kondo",
+            "--name", "Kondo Daily",
+            "--participants", "Agustín",
+            "--goal", "Sync",
+            "--focus-file", str(vault / ".focus"),
+            "--inline")
+        project = (vault / "Mango" / "Proyectos" / "Kondo" / "Kondo.md").read_text(encoding="utf-8")
+        assert "Kondo Daily" not in md.get_section(project, "Enlaces")
+
+    def test_inline_injects_entry_in_agenda(self, vault):
+        setup_day(vault)
+        run("start-meeting", vault,
+            "--day", TODAY, "--time", TIME_NOW,
+            "--org", "Mango", "--project", "Kondo",
+            "--name", "Kondo Daily",
+            "--participants", "Agustín",
+            "--goal", "Sync",
+            "--focus-file", str(vault / ".focus"),
+            "--inline")
+        year, month = TODAY[:4], TODAY[4:6]
+        daily = (vault / "Daily log" / year / month / f"{TODAY}.md").read_text(encoding="utf-8")
+        # Inline meetings aparecen en la agenda como texto plano (sin wikilink)
+        assert "Kondo Daily" in md.get_section(daily, "Agenda")
+
+    def test_task_in_focus_goes_to_pendiente_on_inline(self, vault):
+        setup_day(vault)
+        run("focus", vault,
+            "--path", TASK_PATH, "--type", "task",
+            "--day", TODAY, "--time", TIME_NOW,
+            "--focus-file", str(vault / ".focus"))
+        run("start-meeting", vault,
+            "--day", TODAY, "--time", TIME_NOW,
+            "--org", "Mango", "--project", "Kondo",
+            "--name", "Kondo Daily",
+            "--participants", "Agustín",
+            "--goal", "Sync",
+            "--focus-file", str(vault / ".focus"),
+            "--inline")
+        content = (vault / TASK_PATH).read_text(encoding="utf-8")
+        assert md.get_field(content, "status") == "pendiente"
+
+
+class TestFinishMeetingInline:
+    def test_finish_inline_clears_focus(self, vault):
+        setup_day(vault)
+        run("start-meeting", vault,
+            "--day", TODAY, "--time", TIME_NOW,
+            "--org", "Mango", "--project", "Kondo",
+            "--name", "Kondo Daily",
+            "--participants", "Agustín",
+            "--goal", "Sync",
+            "--focus-file", str(vault / ".focus"),
+            "--inline")
+        r = run("finish-meeting", vault,
+                "--focus-file", str(vault / ".focus"),
+                "--conclusion", "Sync completado")
+        assert r.returncode == 0
+        assert focus_mod.read_focus(vault / ".focus") is None
+
+    def test_finish_inline_appends_conclusion_to_daily(self, vault):
+        setup_day(vault)
+        run("start-meeting", vault,
+            "--day", TODAY, "--time", TIME_NOW,
+            "--org", "Mango", "--project", "Kondo",
+            "--name", "Kondo Daily",
+            "--participants", "Agustín",
+            "--goal", "Sync",
+            "--focus-file", str(vault / ".focus"),
+            "--inline")
+        run("finish-meeting", vault,
+            "--focus-file", str(vault / ".focus"),
+            "--conclusion", "Sync completado")
+        year, month = TODAY[:4], TODAY[4:6]
+        daily = (vault / "Daily log" / year / month / f"{TODAY}.md").read_text(encoding="utf-8")
+        assert "Sync completado" in daily
+
+
 class TestFinishMeeting:
     def test_adds_conclusions(self, vault):
         setup_day(vault)

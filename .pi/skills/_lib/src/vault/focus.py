@@ -1,6 +1,8 @@
 """Lectura y escritura del archivo de estado ``.focus``.
 
-El archivo es un JSON con ``{path, type, day, since}``.
+El archivo es un JSON con ``{path, type, day, since[, section]}``.
+El campo ``section`` es opcional; se usa en reuniones inline para indicar
+la subsección de la nota diaria donde se acumulan las notas (p. ej. ``"Kondo Daily"``).
 Ausencia o vacío = sin foco.
 
 Ejecutable:
@@ -33,9 +35,15 @@ def write_focus(
     type_: str,
     day: str,
     since: str,
+    section: str | None = None,
 ) -> None:
-    """Escribe el estado de foco (sobrescribe si ya existe)."""
-    data = {"path": path, "type": type_, "day": day, "since": since}
+    """Escribe el estado de foco (sobrescribe si ya existe).
+
+    ``section`` es opcional; se incluye solo para reuniones inline.
+    """
+    data: dict = {"path": path, "type": type_, "day": day, "since": since}
+    if section is not None:
+        data["section"] = section
     focus_file.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
 
 

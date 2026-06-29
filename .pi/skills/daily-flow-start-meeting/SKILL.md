@@ -1,6 +1,6 @@
 ---
 name: daily-flow-start-meeting
-description: Empieza una reunión. Puede ser una reunión planificada de la agenda del día o una ad-hoc. Solicita la organización, proyecto, nombre, participantes y objetivo. Si había una tarea en foco, la pasa a pendiente.
+description: Empieza una reunión. Puede ser planificada o ad-hoc. Pregunta si necesita nota propia o si las notas van directamente en la daily (inline). Si había una tarea en foco, la pasa a pendiente.
 ---
 
 # daily-flow-start-meeting
@@ -18,13 +18,13 @@ description: Empieza una reunión. Puede ser una reunión planificada de la agen
 
 3. Solicita los datos necesarios:
    - Organización y proyecto.
-   - Nombre exacto de la reunión (para que coincida con la agenda si no es ad-hoc).
+   - Nombre de la reunión.
    - Participantes (separados por comas).
-   - Objetivo de la reunión.
+   - Objetivo.
 
-4. Inicia la reunión:
+4. **Pregunta si la reunión necesita nota propia o si es inline** (las notas van directamente en la sección Notes de la daily bajo un subencabezado `### Nombre`). Orienta al usuario: dailies, weeklies y reuniones recurrentes cortas suelen ser buenas candidatas a inline.
 
-   Si estaba en la agenda:
+5a. **Con nota propia** (sin `--inline`):
    ```
    .pi/skills/.venv/bin/python .pi/skills/daily-flow-start-meeting/scripts/start_meeting.py \
      --vault-root . \
@@ -33,10 +33,11 @@ description: Empieza una reunión. Puede ser una reunión planificada de la agen
      --name '<nombre>' \
      --participants '<lista>' \
      --goal '<objetivo>' \
-     --focus-file .focus
+     --focus-file .focus [--ad-hoc]
    ```
+   Las notas van a la sección **Notas** de la nota propia de la reunión. La reunión se añade a **Enlaces** del proyecto.
 
-   Si es ad-hoc (añadir `--ad-hoc`):
+5b. **Inline** (con `--inline`):
    ```
    .pi/skills/.venv/bin/python .pi/skills/daily-flow-start-meeting/scripts/start_meeting.py \
      --vault-root . \
@@ -45,12 +46,14 @@ description: Empieza una reunión. Puede ser una reunión planificada de la agen
      --name '<nombre>' \
      --participants '<lista>' \
      --goal '<objetivo>' \
-     --focus-file .focus \
-     --ad-hoc
+     --focus-file .focus [--ad-hoc] \
+     --inline
    ```
+   Las notas van al subencabezado `### Nombre` dentro de **Notes** de la nota diaria. No se crea nota de reunión; no se añade enlace al proyecto.
 
-5. Confirma al usuario qué reunión está en foco. A partir de ahora, todo texto libre se vuelca en "Notas" de la reunión.
+6. Confirma qué reunión está en foco.
 
 ## Notas
-- Si había una tarea en foco, se pasa automáticamente a `pendiente`.
+- Si había una tarea en foco, pasa automáticamente a `pendiente`.
 - Si había otra reunión en foco, se cierra automáticamente (sin conclusiones).
+- Para reuniones inline, `finish-meeting` añade la conclusión en el mismo subencabezado de la daily.
